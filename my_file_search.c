@@ -1,3 +1,6 @@
+
+//#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -5,6 +8,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <pthread.h>
 //This program will deal with 4 threads, so declare variable for it here
 #define THREAD_COUNT 4
 
@@ -49,7 +53,44 @@ int main(int argc, char **argv)
    //Declare threded array to keep trash of threads
    pthread_t thread[THREAD_COUNT] = {0};
 
-   recur_file_search(argv[2]);
+   int threadYes[THREAD_COUNT] = {0};
+
+   struct dirent *enter;
+
+   while((enter = readdir(dir)) != NULL)
+   {
+      //make sure we don't recurse on . or ..
+      if(enter->d_type == DT_DIR && strcmp(enter->d_name, "..") != 0 &&\
+         strcmp(enter->d_name, ".") != 0)
+      {
+      while(enter != NULL)
+      {
+         for(int i = 0; i < THREAD_COUNT; i++)
+         {
+            if(!threadYes[i]) //|| !pthread_tryjoin_np(thread[i], NULL))
+            {
+               threadYes[i] = 1;
+               enter = NULL;
+               break;
+             }
+          }
+       }
+       }
+   }
+
+
+   for(int i = 0; i < THREAD_COUNT; i++)
+   {
+      pthread_join(thread[i], NULL);
+   }
+/*
+
+   //If root directory exists, read through each file in that root and/or
+   //read through all directories and their files that are kept in the root
+   while((enter = readdir(dir)) != NULL)
+   {
+   }
+*/
 
    gettimeofday(&end, NULL);
    printf("Time: %ld\n", (end.tv_sec * 1000000 + end.tv_usec)
