@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/time.h>
 #include <errno.h>
+//This program will deal with 4 threads, so declare variable for it here
+#define THREAD_COUNT 4
 
 //takes a file/dir as argument, recurses, prints name if empty dir or
 //not a dir (leaves)
@@ -16,6 +18,9 @@ const char *search_term;
 
 int main(int argc, char **argv)
 {
+   //Usage of this file is command name file_search_threaded,
+   //search term <search term>, and starting directory <starting dir>.
+   //If there are less or more than these arguments, send message and exit
    if(argc != 3)
    {
 	printf("Usage: my_file_search <search_term> <dir>\n");
@@ -40,6 +45,9 @@ int main(int argc, char **argv)
    //start timer for recursive search
    struct timeval start, end;
    gettimeofday(&start, NULL);
+
+   //Declare threded array to keep trash of threads
+   pthread_t thread[THREAD_COUNT] = {0};
 
    recur_file_search(argv[2]);
 
