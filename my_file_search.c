@@ -1,6 +1,3 @@
-
-//#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -9,12 +6,12 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <pthread.h>
+
 //This program will deal with 4 threads, so declare variable for it here
-#define THREAD_COUNT 4
+#define THREAD_NUM 4
 
 //takes a file/dir as argument, recurses, prints name if empty dir or
 //not a dir (leaves)
-
 void recur_file_search(char *file);
 
 //share search term globally (rather than passing recursively)
@@ -39,6 +36,14 @@ int main(int argc, char **argv)
    //open the top-level directory
    DIR *dir = opendir(argv[2]);
 
+   //Declare array of pthreads
+   pthread_t thread[THREAD_NUM] = {0};
+   //Declare int array to track whether a thread has been initialized
+   int threadYes[THREAD_NUM] = {0};
+
+   struct dirent *myFile;
+
+
    //make sure top-level dir is openable (i.e., exists and is a directory)
    if(dir == NULL)
    {
@@ -50,55 +55,69 @@ int main(int argc, char **argv)
    struct timeval start, end;
    gettimeofday(&start, NULL);
 
-   //Declare threded array to keep trash of threads
-   pthread_t thread[THREAD_COUNT] = {0};
-
-   int threadYes[THREAD_COUNT] = {0};
-
-   struct dirent *enter;
-
-   while((enter = readdir(dir)) != NULL)
+   //This will loop through every file or directory in the starting directory
+   //until the next item is NULL
+   while((myFile = readdir(dir)) != NULL)
    {
       //make sure we don't recurse on . or ..
-      if(enter->d_type == DT_DIR && strcmp(enter->d_name, "..") != 0 &&\
-         strcmp(enter->d_name, ".") != 0)
+      if(strcmp(myFile->d_name, "..") != 0 && strcmp(myFile->d_name, ".") != 0)
       {
-      while(enter != NULL)
-      {
-         for(int i = 0; i < THREAD_COUNT; i++)
+         //declare a counter to keep track of the current amount of threads
+         int threadNum = 0;
+
+
+         //If threadNum is equal to THREAD_NUM, or 4, wait for these threads to
+         //complete before reassigning them to 0
+         if(threadNum == THREAD_NUM)
          {
-            if(!threadYes[i]) //|| !pthread_tryjoin_np(thread[i], NULL))
-            {
-               threadYes[i] = 1;
-               enter = NULL;
-               break;
-             }
-          }
-       }
+            for(int i = 0; i < THREAD_NUM; i++)
+                pthread_join(thread[i], NULL);
+             threadNum = 0;
+         }
+
+
+         //The next file is allocated a block of memory in the heap for the
+         //length in order to format the file in the directory to be a filepath.
+         //The size is the size of myFile and the length of the argument
+         //argv[2]+2
+         char *nFile = malloc((sizeof(char)*strlen(myFile->d_name)) +
+                               strlen(argv[2])+2);
+         //Strncpy takes argv[2] with its space given by strlen(argv[2]) which
+         //gives the length of the argument and puts it into the previously
+         //declared nFile. This print the directory where the search's answers
+         //were found
+         strncpy(nFile, argv[2], strlen(argv[2]));
+         //Strncat appends the characters the length of myFile->d_name and puts
+         //them in nFile
+	 strncat(nFile, myFile->d_name, strlen(myFile->d_name));
+         //This creates new thread in the calling process. &thread[threadNum] is
+         //a pointer to a pthread_t structure that pthread_create uses to know
+         //which number thread this is in the array. The parameters are set to
+         //NULL, and recur_file_search function is called and must return as a
+         // void argument. The thread is started with the previously declared
+         // nFile which must be a void
+	 pthread_create(&thread[threadNum], NULL,(void*)&recur_file_search,
+                        (void*)nFile);
+
+         //Increment the thread count by 1 because a new thread has been created
+	 threadNum++;
        }
    }
 
-
-   for(int i = 0; i < THREAD_COUNT; i++)
-   {
+   //Wait for all threads to finish
+   for(int i = 0; i < THREAD_NUM; i++)
       pthread_join(thread[i], NULL);
-   }
-/*
 
-   //If root directory exists, read through each file in that root and/or
-   //read through all directories and their files that are kept in the root
-   while((enter = readdir(dir)) != NULL)
-   {
-   }
-*/
+   //Close the directory to dree the DIR pointer and memory for it
+   closedir(dir);
 
+   //get the end time and print the time it took to fun the program
    gettimeofday(&end, NULL);
    printf("Time: %ld\n", (end.tv_sec * 1000000 + end.tv_usec)
 	- (start.tv_sec * 1000000 + start.tv_usec));
+
    return 0;
 }
-
-
 
 //This function takes a path to recurse on, searching for mathes to the
 // (global) search_term.  The base case for recursion is when *file is
@@ -110,7 +129,7 @@ int main(int argc, char **argv)
 //Effects: prints the filename if the base case is reached *and* search_term
 // is found in the filename; otherwise, prints the directory name if the
 //directory matches search_term.
-void recur_file_search(char *file) 
+void recur_file_search(char *file)
 {
    //check if directory is actually a file
    DIR *d = opendir(file);
