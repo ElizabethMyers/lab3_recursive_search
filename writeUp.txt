@@ -1,0 +1,32 @@
+a. To use, use command "file_search_threaded <search term> <starting dir>."
+   This program has a parent that utilizes 4 threads in order to perform
+   a recursive search on a given directory. The main function iterates over
+   the <starting dir> starting directory to find all files/folders in the 
+   provided directory. Then, it starts the 4 threads that will execute 
+   recursively over each of the files/filders in the starting directory. The
+   4 threads are all performing similar functions as the main parent function is.
+
+b. The original version is slower than the file_search with 4 threads. With 
+   small and large directories, file_search_threaded completed faster, and 
+   especially with small directories, file_search_threaded finished in about half 
+   the time as the original version.  
+   i. The program is IO bound, meaning each thread must wait for disk access
+      and prints to the screen. Multithreaded programs won't be N times faster
+      because there is overhead with extra work involved, causing the process
+      to slow down. Also, each of the threads is performing independant work,
+      just all equal and at the same time.
+   ii. Yes, because with many directories to search the file_search_threaded
+       will perform better because each thread does work for longer than 0 with
+       less joining and thread creating. With shallow directories, the parent has 
+       to reassign it which takes more time and isn't efficient. The best
+       directory for this assignment would be one with 4 directories that have
+       reasonable depths.
+   iii. Yes, I'm sure it can. The threads right now do what the parent does, 
+        but there is probably a more efficient way to have threads signal they
+        are done or to catch the edge cases of directories and files. 
+
+c. It causes a speedup because the OS has already loaded part or all of the 
+   file into memory already. With the files already in the cache and since
+   they have been used very recently (temporal locality), they will most 
+   likely still be there and won't have to be loaded again. This allows it to
+   have them readily there for use, meaning less disk accesses and a speedup.  
